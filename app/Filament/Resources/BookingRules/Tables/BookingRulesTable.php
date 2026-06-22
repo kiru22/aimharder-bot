@@ -15,7 +15,7 @@ class BookingRulesTable
     {
         return $table
             ->columns([
-                TextColumn::make('account.id')
+                TextColumn::make('account.label')
                     ->searchable(),
                 TextColumn::make('time')
                     ->searchable(),
