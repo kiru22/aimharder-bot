@@ -12,7 +12,10 @@ it('login OK cuando llega la cookie amhrdrauth', function () {
 
     $c = new AimharderClient('hybridboxgrau', 8244);
     $c->login('a@b.com', 'pw', 'fp');   // no lanza
-    expect(true)->toBeTrue();
+
+    Http::assertSent(fn ($r) => str_contains($r->url(), 'login.aimharder.com/api/login')
+        && $r['username'] === 'a@b.com' && $r['password'] === 'pw'
+        && $r['fingerprint'] === 'fp' && $r['iniframe'] === 0);
 });
 
 it('login falla (AuthException) sin amhrdrauth', function () {
@@ -42,5 +45,6 @@ it('book envía form id/day/insist/familyId y devuelve el JSON', function () {
     $c->login('a@b.com', 'pw', 'fp');
     $out = $c->book('222', '20260622', false);
     expect($out['bookState'])->toBe(0);
-    Http::assertSent(fn ($r) => isset($r['id']) && $r['id'] === '222' && $r['day'] === '20260622' && $r['insist'] === 0 && $r['familyId'] === '');
+    Http::assertSent(fn ($r) => str_contains($r->url(), '/api/book')
+        && $r['id'] === '222' && $r['day'] === '20260622' && $r['insist'] === 0 && $r['familyId'] === '');
 });
