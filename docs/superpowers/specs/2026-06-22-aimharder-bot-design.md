@@ -45,7 +45,7 @@ app/
   Filament/Resources/BookingRuleResource.php
   Filament/Resources/BookingLogResource.php   # solo lectura
 database/migrations/
-config/aimharder.php   # defaults: subdomain, box_id, hora disparo, tz, reintentos, proxy
+config/aimharder.php   # defaults: subdomain, box_id, hora disparo, tz, reintentos
 tests/Unit/ClassMatcherTest.php
 ```
 
@@ -215,10 +215,10 @@ Cron del VPS (una línea):
 
 ## 14. Riesgos y cuestiones abiertas
 
-1. **⚠️ Geo-bloqueo (alto):** AimHarder devolvería **403 a IPs fuera de España**. Si el
-   VPS de OVH está en Francia, el bot fallaría. **Verificar la región/IP del VPS**; si
-   no es española, opciones: usar un VPS en España o un **proxy HTTP español**
-   (`config(aimharder.proxy)` previsto en el diseño).
+1. **✓ Geo-bloqueo: RESUELTO.** Comprobado el 2026-06-22 desde el propio VPS (OVH
+   Francia, IP `51.75.121.100`): `GET login.aimharder.com/` → 200 y
+   `GET hybridboxgrau.aimharder.com/schedule` → 200. **No hay bloqueo**; el VPS vale
+   tal cual y **no se necesita proxy**.
 2. **Cookie en Guzzle:** confirmar que Guzzle guarda `amhrdrauth` (Domain padre);
    si no, aplicar el fallback de §6.2.
 3. **`familyId`:** vacío en la captura; confirmar que es siempre vacío para esta cuenta
