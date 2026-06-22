@@ -49,7 +49,7 @@ it('en dry-run no llama a /api/book ni registra booked', function () {
     $this->artisan('bookings:run --dry-run')->assertOk();
 
     Http::assertNotSent(fn ($r) => str_ends_with(parse_url($r->url(), PHP_URL_PATH), '/api/book'));
-    expect(BookingLog::where('status', 'booked')->count())->toBe(0);
+    expect(BookingLog::count())->toBe(0);   // dry-run no registra NADA, no solo no-booked
 });
 
 it('registra no_match cuando la clase no existe', function () {

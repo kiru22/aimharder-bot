@@ -95,7 +95,7 @@ class RunBookings extends Command
             }
 
             $this->log($account, $rule, $day, $classId, $status, $state,
-                $res['errorMssg'] ?? "bookState=$state");
+                $res['errorMssg'] ?? ($status === 'booked' ? 'Reservada correctamente' : "bookState=$state"));
         }
     }
 
