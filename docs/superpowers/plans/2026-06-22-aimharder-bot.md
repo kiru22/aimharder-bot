@@ -1002,79 +1002,132 @@ git commit -m "feat: panel Filament (cuentas, reglas, logs)"
 
 ---
 
-### Task 8: Runbook de despliegue
+### Task 8: Dockerfile + despliegue en Dokploy
 
 **Files:**
-- Create: `README.md`
+- Create: `Dockerfile`, `.dockerignore`, `README.md`
 
 **Interfaces:**
-- Consumes: todo lo anterior.
-- Produces: instrucciones reproducibles para dejarlo corriendo en el VPS.
+- Consumes: toda la app.
+- Produces: imagen Docker que sirve el panel; runbook para desplegar en Dokploy con dos servicios (web + worker) y volumen persistente para SQLite.
 
-- [ ] **Step 1: Escribir el README**
+**Decisiones (del usuario):** despliega con Dokploy (Docker). Producción usa un **servicio worker** con `php artisan schedule:work` (no el cron del sistema). SQLite en **volumen persistente**. `APP_KEY` fija como variable de entorno (cifra las contraseñas).
 
-`README.md`:
+- [ ] **Step 1: Crear el `Dockerfile`** (FrankenPHP)
+
+```dockerfile
+FROM dunglas/frankenphp:1-php8.4
+
+# Extensiones que necesitan Laravel + SQLite + Filament
+RUN install-php-extensions pcntl pdo_sqlite intl zip opcache
+
+WORKDIR /app
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Dependencias PHP (capa cacheable)
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --no-interaction --prefer-dist
+
+# Código de la app
+COPY . .
+RUN composer dump-autoload --optimize \
+ && php artisan filament:assets
+
+# Datos persistentes (SQLite) + permisos de escritura
+RUN mkdir -p /app/database \
+ && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/database
+
+ENV SERVER_NAME=:8080
+EXPOSE 8080
+
+# FrankenPHP sirve public/ por defecto. El servicio web migra al arrancar;
+# el worker (Dokploy) sobreescribe el comando con: php artisan schedule:work
+CMD ["sh", "-c", "mkdir -p /app/database && touch /app/database/database.sqlite && php artisan migrate --force && frankenphp run --config /etc/caddy/Caddyfile"]
+```
+
+- [ ] **Step 2: Crear `.dockerignore`**
+
+```
+/vendor
+/node_modules
+/.git
+/.github
+.env
+/database/*.sqlite*
+/.superpowers
+/docs
+/tests
+```
+
+- [ ] **Step 3: Verificar el build y el arranque**
+
+```bash
+docker build -t aimharder-bot .
+docker run --rm -e APP_KEY="$(php artisan key:generate --show)" -e APP_URL=http://localhost:8080 -p 8080:8080 aimharder-bot &
+sleep 8
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/admin/login
+docker stop $(docker ps -q --filter ancestor=aimharder-bot)
+```
+Expected: el build termina sin error y `/admin/login` devuelve `200`. Si algo del Dockerfile falla (nombre de extensión, ruta del Caddyfile, etc.), ajustarlo hasta que build + curl funcionen y documentar el cambio.
+
+- [ ] **Step 4: Escribir el `README.md`**
+
 ```markdown
 # AimHarder Bot
 
 Reserva clases recurrentes en AimHarder. Panel web (Filament) para gestionar
-cuentas y reglas; un cron dispara la reserva a las 06:00 (Europe/Madrid).
+cuentas y reglas; un worker dispara la reserva a las 06:00 (Europe/Madrid).
 
-## Despliegue (VPS Ubuntu, OVH)
+## Despliegue en Dokploy (Docker)
 
-1. Clonar y dependencias:
-   ```bash
-   git clone <repo> aimharder-bot && cd aimharder-bot
-   composer install --no-dev
-   cp .env.example .env && php artisan key:generate
-   ```
-2. Editar `.env`: `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://tu-subdominio`,
-   `DB_CONNECTION=sqlite`.
-3. Base de datos y assets:
-   ```bash
-   touch database/database.sqlite
-   php artisan migrate --force
-   php artisan filament:assets
-   php artisan make:filament-user   # tu acceso al panel
-   ```
-4. Nginx + php-fpm apuntando a `public/`, con HTTPS (certbot) en el subdominio.
-5. Cron (una línea, como el usuario de la app):
-   ```
-   * * * * * cd /ruta/aimharder-bot && php artisan schedule:run >> /dev/null 2>&1
-   ```
+Dos servicios desde este mismo repo/imagen, compartiendo un volumen:
+
+1. **Aplicación:** Dokploy → New Application → fuente = este repo, build type = Dockerfile.
+2. **Variables de entorno** (en AMBOS servicios):
+   - `APP_KEY` = clave fija (genérala una vez con `php artisan key:generate --show`).
+     ⚠️ NO la cambies entre despliegues: cifra las contraseñas de AimHarder; si cambia,
+     dejan de descifrarse y el login del bot se rompe.
+   - `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://tu-subdominio`
+   - `DB_CONNECTION=sqlite`, `DB_DATABASE=/app/database/database.sqlite`
+3. **Volumen persistente:** monta un volumen en `/app/database` (web y worker). Ahí vive
+   `database.sqlite` (cuentas, reglas, logs). Sin volumen se borra en cada redeploy.
+4. **Servicio web:** usa el `CMD` por defecto (migra y sirve el panel en el puerto 8080).
+   Expón el dominio con HTTPS (Dokploy/Traefik lo gestiona).
+5. **Servicio worker:** mismo repo/imagen, **command** override = `php artisan schedule:work`.
+   Comparte el mismo volumen. Es quien ejecuta `bookings:run` a las 06:00 Madrid.
+6. **Usuario admin** (una vez, en una shell del contenedor web): `php artisan make:filament-user`.
 
 ## Uso
 
-- Entra al panel (`/admin`), crea una **cuenta** (email + contraseña de AimHarder).
-- Crea **reglas**: días + hora (`18:00`) + nombre de clase (`CrossFit`).
-- Revisa **Logs** para ver el resultado de cada ejecución.
+- Panel `/admin` → crea una **cuenta** (email + contraseña de AimHarder) y **reglas**
+  (días + hora `18:00` + nombre de clase `CrossFit`).
+- **Logs** muestra el resultado de cada ejecución (tu aviso si algo falla).
 
 ## Probar sin reservar
 
 ```bash
-php artisan bookings:run --dry-run
+php artisan bookings:run --dry-run   # en una shell del contenedor
 ```
 
 ## Notas
 
-- La reserva es de la clase **del mismo día** (las reservas abren a las 00:00).
-- Rota la contraseña de AimHarder si se compartió en algún sitio e introdúcela en el panel.
+- Reserva la clase **del mismo día** (las reservas abren a las 00:00).
+- Rota la contraseña de AimHarder compartida en el chat e introdúcela en el panel.
 ```
 
-- [ ] **Step 2: Verificar dry-run de punta a punta (manual, con una cuenta real)**
-
-Crea una cuenta y una regla reales en el panel para una clase de hoy, y ejecuta:
-```bash
-php artisan bookings:run --dry-run
-```
-Expected: imprime `[dry-run] … reservaría <clase> <hora> (id …)` con el id real → confirma que login + listado + matching funcionan contra AimHarder de verdad.
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add -A
-git commit -m "docs: runbook de despliegue y uso"
+git commit -m "feat: Dockerfile (FrankenPHP) + runbook de despliegue en Dokploy"
 ```
+
+- [ ] **Step 6 (manual, fuera del subagente): dry-run de punta a punta con una cuenta real**
+
+El usuario crea una cuenta y una regla reales en el panel para una clase de hoy y ejecuta
+`php artisan bookings:run --dry-run`; debe imprimir `[dry-run] … reservaría <clase> <hora> (id …)`
+con el id real → confirma login + listado + matching contra AimHarder de verdad.
 
 ---
 
