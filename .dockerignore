@@ -1,0 +1,9 @@
+/vendor
+/node_modules
+/.git
+/.github
+.env
+/database/*.sqlite*
+/.superpowers
+/docs
+/tests
