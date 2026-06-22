@@ -9,7 +9,7 @@ class BookingLog extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['account_id', 'booking_rule_id', 'target_date', 'class_id', 'status', 'book_state', 'message', 'created_at'];
+    protected $fillable = ['account_id', 'booking_rule_id', 'target_date', 'class_id', 'status', 'book_state', 'message'];
 
     protected function casts(): array
     {
