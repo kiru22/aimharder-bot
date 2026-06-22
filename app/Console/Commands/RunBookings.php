@@ -88,7 +88,9 @@ class RunBookings extends Command
 
             if ($errLang === 'NOPUEDESRESERVAMISMAHORA') {
                 $status = 'already';
-            } elseif ($hasError) {
+            } elseif ($hasError || $state === null || $state < 0) {
+                // bookState negativo (lista llena -1, sin créditos -2, antelación -12)
+                // o respuesta vacía/no-exitosa ($state null) = fallo, NO un falso "booked".
                 $status = 'failed';
             } else {
                 $status = 'booked';

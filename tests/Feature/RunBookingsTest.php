@@ -65,3 +65,19 @@ it('registra no_match cuando la clase no existe', function () {
 
     expect(BookingLog::where('status', 'no_match')->count())->toBe(1);
 });
+
+it('registra failed (no booked) cuando bookState es negativo sin errorMssg', function () {
+    Http::fake([
+        'login.aimharder.com/api/login'             => Http::response('{}', 200, ['Set-Cookie' => 'amhrdrauth=x; Domain=aimharder.com']),
+        'hybridboxgrau.aimharder.com/api/bookings*' => Http::response(bookingsJson(), 200),
+        'hybridboxgrau.aimharder.com/api/book'      => Http::response(['bookState' => -2], 200),
+    ]);
+
+    $a = Account::create(['label' => 'Yo', 'email' => 'a@b.com', 'password' => 'pw']);
+    $a->rules()->create(['weekdays' => [1], 'time' => '18:00', 'class_name' => 'CrossFit']);
+
+    $this->artisan('bookings:run')->assertOk();
+
+    expect(BookingLog::where('status', 'failed')->count())->toBe(1)
+        ->and(BookingLog::where('status', 'booked')->count())->toBe(0);
+});

@@ -15,7 +15,7 @@
 - `amhrdrauth` se fija a `Domain=aimharder.com` para que valga en el subdominio del box.
 - Listar: `GET https://{sub}.aimharder.com/api/bookings?day=YYYYMMDD&familyId=&box={box}&_={ms}`.
 - Reservar: `POST https://{sub}.aimharder.com/api/book`, **form** `{id, day, insist:0|1, familyId:''}`.
-- Resultado de reserva: éxito = HTTP 200 sin `errorMssg`/`errorMssgLang`. `errorMssgLang==NOPUEDESRESERVAMISMAHORA` = ya reservada.
+- Resultado de reserva: éxito SOLO si `bookState` no es negativo ni null y sin `errorMssg`/`errorMssgLang`. `bookState<0` (-1 lista llena / -2 sin créditos / -12 antelación) o respuesta vacía = `failed` (nunca un falso `booked`). `errorMssgLang==NOPUEDESRESERVAMISMAHORA` = ya reservada.
 - `accounts.password` con cast `encrypted`. Secretos fuera de git.
 - Zona horaria de operación: `Europe/Madrid`. Reserva la clase **del mismo día**.
 - `fingerprint`: estable por cuenta = `substr(hash('sha256','aimharder-bot-'.$email),0,50)`.
