@@ -9,6 +9,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class BookingStatsWidget extends StatsOverviewWidget
 {
+    protected static bool $isLazy = false;
+
     protected static ?int $sort = 1;
 
     protected function getStats(): array

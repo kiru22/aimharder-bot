@@ -23,3 +23,11 @@ it('muestra los botones de ejecución manual en logs', function () {
         ->assertSee('Ejecutar reservas ahora')
         ->assertSee('Simular');
 });
+
+it('carga el dashboard con los tres widgets', function () {
+    $this->get('/admin')
+        ->assertOk()
+        ->assertSee('Próximas reservas')
+        ->assertSee('Reservas recientes')
+        ->assertSee('Reglas activas');
+});
