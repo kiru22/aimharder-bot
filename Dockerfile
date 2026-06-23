@@ -1,5 +1,7 @@
 FROM dunglas/frankenphp:1-php8.4
 
+# build marker: dashboard (fuerza rebuild)
+
 # Extensiones que necesitan Laravel + SQLite + Filament
 RUN install-php-extensions pcntl pdo_sqlite intl zip opcache
 
