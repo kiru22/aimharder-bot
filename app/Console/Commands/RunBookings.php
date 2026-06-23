@@ -58,6 +58,13 @@ class RunBookings extends Command
         $payload = $client->listClasses($day);
 
         foreach ($rules as $rule) {
+            // Saltar si hoy está en skip_dates
+            $todayDate = now(config('aimharder.timezone'))->format('Y-m-d');
+            if (in_array($todayDate, $rule->skip_dates ?? [], true)) {
+                $this->log($account, $rule, $day, null, 'skipped', null, 'Saltada manualmente.');
+                continue;
+            }
+
             $match = ClassMatcher::find($payload, $rule->time, $rule->class_name);
 
             if ($match === null) {
