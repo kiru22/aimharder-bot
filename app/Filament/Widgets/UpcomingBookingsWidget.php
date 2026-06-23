@@ -35,11 +35,12 @@ class UpcomingBookingsWidget extends TableWidget
                     ->searchable(),
                 TextColumn::make('weekdays')
                     ->label('Días')
-                    ->formatStateUsing(function ($state): string {
+                    ->getStateUsing(function (BookingRule $record): string {
                         $names = [1 => 'Lun', 2 => 'Mar', 3 => 'Mié', 4 => 'Jue', 5 => 'Vie', 6 => 'Sáb', 7 => 'Dom'];
-                        $days  = is_array($state) ? $state : (json_decode($state, true) ?? []);
 
-                        return implode(', ', array_map(fn ($d) => $names[$d] ?? $d, $days));
+                        return collect($record->weekdays ?? [])
+                            ->map(fn ($d) => $names[$d] ?? $d)
+                            ->implode(', ');
                     }),
                 TextColumn::make('time')
                     ->label('Hora'),

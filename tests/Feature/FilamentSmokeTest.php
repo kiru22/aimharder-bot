@@ -25,9 +25,13 @@ it('muestra los botones de ejecución manual en logs', function () {
 });
 
 it('carga el dashboard con los tres widgets', function () {
+    $account = \App\Models\Account::create(['label' => 'Yo', 'email' => 'a@b.com', 'password' => 'pw']);
+    $account->rules()->create(['weekdays' => [1, 3], 'time' => '18:00', 'class_name' => 'CrossFit']);
+
     $this->get('/admin')
         ->assertOk()
         ->assertSee('Próximas reservas')
         ->assertSee('Reservas recientes')
-        ->assertSee('Reglas activas');
+        ->assertSee('Reglas activas')
+        ->assertSee('CrossFit');   // renderiza la fila -> cubre el formato de la columna "Días"
 });
