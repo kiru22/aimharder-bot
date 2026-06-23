@@ -35,7 +35,7 @@ class BookingRule extends Model
     public function nextOccurrence(?Carbon $from = null): ?Carbon
     {
         $tz   = config('aimharder.timezone');
-        $from ??= now($tz)->startOfDay();
+        $from ??= now($tz);
         $skip = $this->skip_dates ?? [];
         $days = $this->weekdays ?? [];
 
@@ -51,8 +51,14 @@ class BookingRule extends Model
             }
 
             [$h, $m] = explode(':', $this->time);
+            $dt = $candidate->setTime((int) $h, (int) $m);
 
-            return $candidate->setTime((int) $h, (int) $m);
+            // Descarta ocurrencias ya pasadas (incluye hoy si la hora ya pasó).
+            if ($dt->lessThanOrEqualTo($from)) {
+                continue;
+            }
+
+            return $dt;
         }
 
         return null;

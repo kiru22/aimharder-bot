@@ -39,6 +39,7 @@ class UpcomingBookingsWidget extends TableWidget
                         $names = [1 => 'Lun', 2 => 'Mar', 3 => 'Mié', 4 => 'Jue', 5 => 'Vie', 6 => 'Sáb', 7 => 'Dom'];
 
                         return collect($record->weekdays ?? [])
+                            ->sort()
                             ->map(fn ($d) => $names[$d] ?? $d)
                             ->implode(', ');
                     }),

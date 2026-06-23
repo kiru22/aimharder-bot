@@ -49,6 +49,18 @@ it('salta la fecha que está en skip_dates y usa la siguiente', function () {
         ->and($next->format('H:i'))->toBe('18:00');
 });
 
+it('salta hoy si la hora ya pasó y devuelve la siguiente ocurrencia', function () {
+    Carbon::setTestNow(Carbon::create(2026, 6, 23, 20, 0, 0, 'Europe/Madrid')); // martes 20:00 (tras las 18:00)
+
+    $rule = new BookingRule(['weekdays' => [2], 'time' => '18:00', 'skip_dates' => null]); // martes 18:00
+
+    $next = $rule->nextOccurrence();
+
+    expect($next)->not->toBeNull()
+        ->and($next->format('Y-m-d'))->toBe('2026-06-30') // siguiente martes, no hoy
+        ->and($next->format('H:i'))->toBe('18:00');
+});
+
 it('retorna null si no hay weekdays configurados', function () {
     Carbon::setTestNow(Carbon::create(2026, 6, 23, 6, 0, 0, 'Europe/Madrid'));
 
