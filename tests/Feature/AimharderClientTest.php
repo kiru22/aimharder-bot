@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Http;
 it('login OK cuando llega la cookie amhrdrauth', function () {
     Http::fake([
         'login.aimharder.com/api/login' => Http::response('{}', 200, [
-            'Set-Cookie' => 'amhrdrauth=442015%7C123%7Cabc; Domain=aimharder.com; Path=/; HttpOnly',
+            'Set-Cookie' => 'amhrdrauth=faketoken123; Domain=aimharder.com; Path=/; HttpOnly',
         ]),
     ]);
 
