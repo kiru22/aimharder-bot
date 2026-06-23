@@ -16,13 +16,18 @@ COPY . .
 RUN composer dump-autoload --optimize \
  && php artisan filament:assets
 
-# Datos persistentes (SQLite) + permisos de escritura
-RUN mkdir -p /app/database \
- && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/database
+# Carpeta dedicada para el SQLite persistente (NO /app/database: ahí viven las
+# migrations del código; un volumen montado encima las taparía). Aquí se monta el volumen.
+RUN mkdir -p /app/persistent \
+ && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/persistent
 
-ENV SERVER_NAME=:8080
+# Por defecto la BD vive en el volumen persistente (Dokploy puede sobreescribirlo).
+ENV SERVER_NAME=:8080 \
+    DB_CONNECTION=sqlite \
+    DB_DATABASE=/app/persistent/database.sqlite
 EXPOSE 8080
 
-# FrankenPHP sirve public/ por defecto. El servicio web migra al arrancar;
-# el worker (Dokploy) sobreescribe el comando con: php artisan schedule:work
-CMD ["sh", "-c", "mkdir -p /app/database && touch /app/database/database.sqlite && php artisan migrate --force && frankenphp run --config /etc/caddy/Caddyfile"]
+# FrankenPHP sirve public/ por defecto. El servicio web crea/migra la BD en la ruta
+# de DB_DATABASE (sea cual sea) y arranca; el worker (Dokploy) sobreescribe el
+# comando con: php artisan schedule:work
+CMD ["sh", "-c", "mkdir -p \"$(dirname \"$DB_DATABASE\")\" && touch \"$DB_DATABASE\" && php artisan migrate --force && frankenphp run --config /etc/caddy/Caddyfile"]

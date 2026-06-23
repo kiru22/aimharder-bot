@@ -13,9 +13,12 @@ Dos servicios desde este mismo repo/imagen, compartiendo un volumen:
      ⚠️ NO la cambies entre despliegues: cifra las contraseñas de AimHarder; si cambia,
      dejan de descifrarse y el login del bot se rompe.
    - `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://tu-subdominio`
-   - `DB_CONNECTION=sqlite`, `DB_DATABASE=/app/database/database.sqlite`
-3. **Volumen persistente:** monta un volumen en `/app/database` (web y worker). Ahí vive
+   - `DB_CONNECTION=sqlite`, `DB_DATABASE=/app/persistent/database.sqlite`
+     (el Dockerfile ya trae este valor por defecto)
+3. **Volumen persistente:** monta un volumen en **`/app/persistent`** (web y worker). Ahí vive
    `database.sqlite` (cuentas, reglas, logs). Sin volumen se borra en cada redeploy.
+   ⚠️ NO montes en `/app/database`: esa carpeta contiene las migraciones del código y el
+   volumen las taparía.
 4. **Servicio web:** usa el `CMD` por defecto (migra y sirve el panel en el puerto 8080).
    Expón el dominio con HTTPS (Dokploy/Traefik lo gestiona).
 5. **Servicio worker:** mismo repo/imagen, **command** override = `php artisan schedule:work`.
