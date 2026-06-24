@@ -65,11 +65,12 @@ class RunBookings extends Command
                 continue;
             }
 
-            $match = ClassMatcher::find($payload, $rule->time, $rule->class_name);
+            $effectiveTime = $rule->effectiveTimeFor($todayDate);
+            $match = ClassMatcher::find($payload, $effectiveTime, $rule->class_name);
 
             if ($match === null) {
                 $this->log($account, $rule, $day, null, 'no_match', null,
-                    "No se encontró {$rule->class_name} a las {$rule->time}.");
+                    "No se encontró {$rule->class_name} a las {$effectiveTime}.");
 
                 continue;
             }

@@ -9,16 +9,25 @@ use Illuminate\Support\Collection;
 
 class BookingRule extends Model
 {
-    protected $fillable = ['account_id', 'weekdays', 'time', 'class_name', 'insist', 'active', 'skip_dates'];
+    protected $fillable = ['account_id', 'weekdays', 'time', 'time_overrides', 'class_name', 'insist', 'active', 'skip_dates'];
 
     protected function casts(): array
     {
         return [
-            'weekdays'   => 'array',
-            'insist'     => 'boolean',
-            'active'     => 'boolean',
-            'skip_dates' => 'array',
+            'weekdays'       => 'array',
+            'time_overrides' => 'array',
+            'insist'         => 'boolean',
+            'active'         => 'boolean',
+            'skip_dates'     => 'array',
         ];
+    }
+
+    /**
+     * Hora efectiva para una fecha concreta: usa el override si existe, si no la hora base.
+     */
+    public function effectiveTimeFor(string $ymd): string
+    {
+        return ($this->time_overrides[$ymd] ?? null) ?? $this->time;
     }
 
     public function account(): BelongsTo
@@ -50,7 +59,7 @@ class BookingRule extends Model
                 continue;
             }
 
-            [$h, $m] = explode(':', $this->time);
+            [$h, $m] = explode(':', $this->effectiveTimeFor($candidate->format('Y-m-d')));
             $dt = $candidate->setTime((int) $h, (int) $m);
 
             // Descarta ocurrencias ya pasadas (incluye hoy si la hora ya pasó).
@@ -75,7 +84,6 @@ class BookingRule extends Model
         $from = now($tz)->startOfDay();
         $skip = $this->skip_dates ?? [];
         $wds  = $this->weekdays ?? [];
-        [$h, $m] = explode(':', $this->time);
         $result = collect();
 
         for ($i = 0; $i < $days; $i++) {
@@ -89,6 +97,7 @@ class BookingRule extends Model
                 continue;
             }
 
+            [$h, $m] = explode(':', $this->effectiveTimeFor($candidate->format('Y-m-d')));
             $result->push($candidate->setTime((int) $h, (int) $m));
         }
 
