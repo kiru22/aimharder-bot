@@ -5,13 +5,22 @@ FROM dunglas/frankenphp:1-php8.4
 # Extensiones que necesitan Laravel + SQLite + Filament
 RUN install-php-extensions pcntl pdo_sqlite intl zip opcache
 
+# unzip + git: descompresión nativa y fallback a source si un dist falla
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends unzip git \
+ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Dependencias PHP (capa cacheable)
+# Dependencias PHP (capa cacheable). Reintentos: codeload/GitHub da 400 transitorios.
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --no-autoloader --no-interaction --prefer-dist
+RUN for i in 1 2 3 4 5; do \
+      composer install --no-dev --no-scripts --no-autoloader --no-interaction --prefer-dist && exit 0; \
+      echo "composer install falló (intento $i/5), reintento en 10s..."; sleep 10; \
+    done; \
+    echo "composer install falló tras 5 intentos"; exit 1
 
 # Código de la app
 COPY . .
